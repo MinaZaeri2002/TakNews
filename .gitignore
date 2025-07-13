@@ -1,0 +1,81 @@
+### Python ###
+__pycache__/
+*.py[cod]
+*.pyc
+.python-version
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+pip-selfcheck.json
+*.env
+.env
+.env.db
+.env*.local
+
+### Django ###
+*.log
+*.pot
+*.sqlite3
+*.sql
+db.sqlite3
+media/
+staticfiles/
+
+### Backup files ###
+*.bak
+*.backup
+
+### IDE ###
+.idea/
+.vscode/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Docker ###
+docker-compose.override.yml
+
+### Database migrations (exclude only initial) ###
+!*/migrations/__init__.py
+*/migrations/*.py
+
+### Celery ###
+celerybeat-schedule.*
+celerybeat.pid
+
+### Scrapy ###
+.scrapy/
+*.scrapy
+
+### PyCharm ###
+.idea/
+.idea_modules/
+
+### Jupyter ###
+.ipynb_checkpoints/
+
+### Logs ###
+logs/
+*.log
+
+### Test files ###
+.coverage
+htmlcov/
+.pytest_cache/
+
+### Packages ###
+*.egg
+*.egg-info/
+dist/
+build/
+wheelhouse/
+
+### Heroku ###
+Procfile
