@@ -5,7 +5,6 @@ from rest_framework.views import APIView
 from .models import News
 from .serializers import NewsSerializer
 from .filters import NewsFilter
-from django_filters.rest_framework import DjangoFilterBackend
 
 
 class NewsPagination(PageNumberPagination):
