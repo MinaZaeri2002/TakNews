@@ -9,26 +9,11 @@ class Tag(models.Model):
         return self.name
 
 
-class Source(models.Model):
-    name = models.CharField(max_length=200)
-    website = models.URLField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.name
-
-
 class News(models.Model):
     title = models.CharField(max_length=250)
     content = models.TextField()
-    source = models.ForeignKey(
-        Source,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-    )
+    source = models.URLField(unique=True)
     tags = models.ManyToManyField(Tag, blank=True)
-    external_url = models.URLField(blank=True)
     published_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
