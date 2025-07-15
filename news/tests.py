@@ -3,15 +3,12 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework import status
 from datetime import timedelta, datetime
-from .models import News, Tag, Source
+from .models import News, Tag
 
 
 class NewsAPITests(TestCase):
     def setUp(self):
         self.client = APIClient()
-
-        self.source1 = Source.objects.create(name='test1', website='https://test1.com')
-        self.source2 = Source.objects.create(name='test2', website='https://test2.com')
 
         self.tag_tech = Tag.objects.create(name='technology', slug='technology')
         self.tag_economy = Tag.objects.create(name='economy', slug='economy')
@@ -20,8 +17,7 @@ class NewsAPITests(TestCase):
         self.news1 = News.objects.create(
             title="technology news",
             content="This is a news about technology. Artificial intelligence is transforming industries worldwide.",
-            source=self.source1,
-            external_url='https://test.com/news1',
+            source='https://test1.com/news1',
             published_at=timezone.now() - timedelta(days=2),
             is_active=True
         )
@@ -30,8 +26,7 @@ class NewsAPITests(TestCase):
         self.news2 = News.objects.create(
             title="economy news",
             content="This is a news about economy. Stock markets show significant growth this quarter.",
-            source=self.source2,
-            external_url='https://test.com/news2',
+            source='https://test2.com/news2',
             published_at=timezone.now() - timedelta(days=1),
             is_active=True
         )
@@ -40,8 +35,7 @@ class NewsAPITests(TestCase):
         self.news3 = News.objects.create(
             title="sport news",
             content="This is a news about sport.",
-            source=self.source1,
-            external_url='https://test.com/news3',
+            source='https://test1.com/news3',
             published_at=timezone.now(),
             is_active=True
         )
@@ -50,8 +44,7 @@ class NewsAPITests(TestCase):
         self.news4 = News.objects.create(
             title="technology2 news",
             content="This is a news about technology2. Quantum computing breakthrough achieved.",
-            source=self.source1,
-            external_url='https://test.com/news4',
+            source='https://test1.com/news4',
             published_at=timezone.now() - timedelta(days=3),
             is_active=True
         )
@@ -60,8 +53,7 @@ class NewsAPITests(TestCase):
         self.inactive_news = News.objects.create(
             title="inactive news",
             content="This is a news about inactive news.",
-            source=self.source1,
-            external_url='https://test.com/inactive',
+            source='https://test1.com/inactive',
             published_at=timezone.now(),
             is_active=False
         )
@@ -71,7 +63,6 @@ class NewsAPITests(TestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
         self.assertIn('count', response.data)
         self.assertIn('next', response.data)
         self.assertIn('previous', response.data)
@@ -79,7 +70,6 @@ class NewsAPITests(TestCase):
 
         results = response.data['results']
         self.assertEqual(len(results), 4)
-
         self.assertEqual(results[0]['title'], 'sport news')
         self.assertEqual(results[1]['title'], 'economy news')
         self.assertEqual(results[2]['title'], 'technology news')
@@ -91,7 +81,6 @@ class NewsAPITests(TestCase):
         self.assertIn('content', first_item)
         self.assertIn('source', first_item)
         self.assertIn('tags', first_item)
-        self.assertIn('external_url', first_item)
         self.assertIn('published_at', first_item)
 
     def test_get_single_news(self):
@@ -101,7 +90,6 @@ class NewsAPITests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['title'], 'technology news')
         self.assertEqual(response.data['content'], 'This is a news about technology. Artificial intelligence is transforming industries worldwide.')
-
         tags = [tag['name'] for tag in response.data['tags']]
         self.assertEqual(tags, ['technology'])
 
@@ -117,7 +105,6 @@ class NewsAPITests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         results = response.data['results']
-
         self.assertEqual(len(results), 2)
         titles = [item['title'] for item in results]
         self.assertIn('technology news', titles)
@@ -130,7 +117,6 @@ class NewsAPITests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         results = response.data['results']
-
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]['title'], 'sport news')
 
@@ -140,7 +126,6 @@ class NewsAPITests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         results = response.data['results']
-
         titles = [item['title'] for item in results]
         self.assertIn('technology news', titles)
         self.assertIn('technology2 news', titles)
@@ -158,7 +143,6 @@ class NewsAPITests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         results = response.data['results']
-
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]['title'], 'technology news')
 
@@ -167,7 +151,7 @@ class NewsAPITests(TestCase):
             News.objects.create(
                 title=f"Extra News {i}",
                 content="Additional content",
-                source=self.source1,
+                source=f'https://extra.com/{i}',
                 published_at=timezone.now(),
                 is_active=True
             )
@@ -206,7 +190,4 @@ class NewsAPITests(TestCase):
         url = f'/api/news/{self.news1.id}/'
         response = self.client.get(url)
         self.assertIsInstance(response.data['published_at'], str)
-
         datetime.fromisoformat(response.data['published_at'])
-
-
