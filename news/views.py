@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
@@ -29,6 +30,20 @@ class NewsAPIView(APIView):
 
         filtered_queryset = NewsFilter(request.GET, queryset=queryset).qs
 
+        search_query = request.GET.get('search')
+        if search_query:
+            filtered_queryset = filtered_queryset.filter(
+                Q(title__icontains=search_query) |
+                Q(content__icontains=search_query)
+            )
+
+        ordering = request.GET.get('ordering')
+        allowed_ordering_fields = ['published_at', '-published_at', 'title', '-title']
+        if ordering in allowed_ordering_fields:
+            filtered_queryset = filtered_queryset.order_by(ordering)
+        else:
+            filtered_queryset = filtered_queryset.order_by('-published_at')
+
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(filtered_queryset, request)
 
@@ -38,5 +53,12 @@ class NewsAPIView(APIView):
 
         serializer = NewsSerializer(filtered_queryset, many=True)
         return Response(serializer.data)
+
+    def post(self, request, format=None):
+        serializer = NewsSerializer(data=request.data)
+        if serializer.is_valid():
+            news = serializer.save()
+            return Response(NewsSerializer(news).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
