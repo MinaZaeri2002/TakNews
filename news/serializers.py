@@ -7,69 +7,53 @@ class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ['id', 'name', 'slug']
-        read_only_fields = ('slug',)
 
 
 class NewsSerializer(serializers.ModelSerializer):
-    tags = TagSerializer(many=True, required=False)
-    tag_names= serializers.ListField(
+    tags = serializers.ListField(
         child=serializers.CharField(max_length=100),
         write_only=True,
-        required=False,
-        allow_empty=True,
+        required=False
     )
+
+    tags_info = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = News
-        fields = '__all__'
-        extra_fields = ['tags_names']
+        fields = ['id', 'title', 'content', 'source', 'published_at', 'created_at', 'updated_at', 'is_active', 'tags', 'tags_info']
+
+    def get_tags_info(self, obj):
+        return TagSerializer(obj.tags.all(), many=True).data
 
     def create(self, validated_data):
-        tag_names = validated_data.pop('tag_names', [])
-        tags_data = validated_data.pop('tags', [])
-
+        tag_names = validated_data.pop('tags', [])
         news = News.objects.create(**validated_data)
 
-        all_tag_names = []
-
-        all_tag_names.extend(tag_names)
-
-        for tag_data in tags_data:
-            if 'name' in tag_data:
-                all_tag_names.append(tag_data['name'])
-
-        for tag_name in set(all_tag_names):
-            tag_name = tag_name.strip()
-            if tag_name:
+        for name in tag_names:
+            name = name.strip()
+            if name:
                 tag, _ = Tag.objects.get_or_create(
-                    name=tag_name,
-                    defaults={'slug': slugify(tag_name)}
+                    name=name,
+                    defaults={'slug': slugify(name)}
                 )
                 news.tags.add(tag)
-
         return news
 
     def update(self, instance, validated_data):
-        tags_data = validated_data.pop('tags', [])
-
+        tag_names = validated_data.pop('tags', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        tags_to_add = []
-
-        for tag_data in tags_data:
-            tag_name = tag_data.get('name', '').strip()
-            if tag_name:
-                tag, _ = Tag.objects.get_or_create(
-                    name=tag_name,
-                    defaults={'slug': slugify(tag_name)}
-                )
-                tags_to_add.append(tag)
-
-        instance.tags.set(tags_to_add)
-
+        if tag_names is not None:
+            tags = []
+            for name in tag_names:
+                name = name.strip()
+                if name:
+                    tag, _ = Tag.objects.get_or_create(
+                        name=name,
+                        defaults={'slug': slugify(name)}
+                    )
+                    tags.append(tag)
+            instance.tags.set(tags)
         return instance
-
-
-
