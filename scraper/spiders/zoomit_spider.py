@@ -2,6 +2,7 @@ import re
 from urllib.parse import urljoin
 import jdatetime
 import scrapy
+from news.models import News
 
 
 class ZoomitSpider(scrapy.Spider):
@@ -27,13 +28,33 @@ class ZoomitSpider(scrapy.Spider):
 
     article_pattern = re.compile(r'^https?://(?:www\.)?zoomit\.ir/[^/]+/\d{5,}-[a-z0-9-]+/?$')
 
+    first_db_url = None
+
+    def __init__(self, *args, **kwargs):
+        super(ZoomitSpider, self).__init__(*args, **kwargs)
+        last_news = News.objects.order_by('-published_at').first()
+        self.last_db_url = last_news.source if last_news else None
+        self.found_last_db_url = False
+        self.current_page = 1
+        self.max_pages = 10
+
     def start_requests(self):
-        for page in range(1, 10):
-            url = f"https://www.zoomit.ir/archive/?pageNumber={page}"
+        if self.last_db_url is None:
+            for page in range(1, self.max_pages + 1):
+                url = f"https://www.zoomit.ir/archive/?pageNumber={page}"
+                yield scrapy.Request(
+                    url,
+                    callback=self.parse_archive,
+                    meta={"playwright": True, "page_number": page}
+                )
+
+        else:
+            url = f"https://www.zoomit.ir/archive/?pageNumber={self.current_page}"
             yield scrapy.Request(
-                url,
+                url=url,
                 callback=self.parse_archive,
-                meta={"playwright": True, "page_number": page}
+                meta={'playwright': True, 'page_number': self.current_page},
+                dont_filter=True
             )
 
     def parse_archive(self, response):
@@ -44,20 +65,39 @@ class ZoomitSpider(scrapy.Spider):
             if not href:
                 continue
             href = self.clean_url(response.url, href)
-            if self.article_pattern.match(href):
+
+            if href == self.last_db_url:
+                self.logger.info(f"Reached last_db_url: {href}. Stopping...")
+                self.found_last_db_url = True
+                return
+
+            elif self.article_pattern.match(href):
                 yield scrapy.Request(
                     href,
                     callback=self.parse_news
                 )
 
+        if not self.found_last_db_url and self.current_page < self.max_pages:
+            self.current_page += 1
+            next_url = f"https://www.zoomit.ir/archive/?pageNumber={self.current_page}"
+            yield scrapy.Request(
+                url=next_url,
+                callback=self.parse_archive,
+                meta={'playwright': True, 'page_number': self.current_page},
+                dont_filter=True
+            )
+
     def parse_news(self, response):
+        title = response.css('h1::text').get()
+        content = self.get_content(response)
+
         yield {
-            'title': response.css('h1::text').get(),
-            'content': self.get_content(response),
+            'title': title,
+            'content': content,
             'source': response.url,
             'published_at': self.get_date_time(response),
             'is_active': True,
-            'tags': response.css('div.sc-a11b1542-0.fCUOzW a span::text').getall(),
+            'tags': response.xpath('//*[@id="__next"]/div[2]/div[1]/main/article/header/div/div/div[2]/div[1]/a/span//text()').getall(),
         }
 
     def clean_url(self, base, href):
@@ -66,11 +106,11 @@ class ZoomitSpider(scrapy.Spider):
         return href.split("#")[0].strip()
 
     def get_content(self, response):
-        texts = response.css('div.sc-481293f7-1.jrhnOU *::text').getall()
+        texts = response.xpath('//*[@id="__next"]/div[2]/div[1]/main/article/div/div[3]/div/div//text() | //*[@id="__next"]/div[2]/div[1]/main/article/div/div[5]/div/div/div//text()').getall()
         return '\n'.join(t.strip().replace('\u200c', '') for t in texts if t.strip())
 
     def get_date_time(self, response):
-        raw = response.css('span[class*="fa"]::text').get()
+        raw = response.xpath('//*[@id="__next"]/div[2]/div[1]/main/article/header/div/div/div[2]/span[1]//text()').get()
         if not raw:
             return None
 
