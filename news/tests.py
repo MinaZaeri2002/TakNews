@@ -80,7 +80,7 @@ class NewsAPITests(TestCase):
         self.assertIn('title', first_item)
         self.assertIn('content', first_item)
         self.assertIn('source', first_item)
-        self.assertIn('tags', first_item)
+        self.assertIn('tags_info', first_item)
         self.assertIn('published_at', first_item)
 
     def test_get_single_news(self):
@@ -90,7 +90,7 @@ class NewsAPITests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['title'], 'technology news')
         self.assertEqual(response.data['content'], 'This is a news about technology. Artificial intelligence is transforming industries worldwide.')
-        tags = [tag['name'] for tag in response.data['tags']]
+        tags = [tag['name'] for tag in response.data['tags_info']]
         self.assertEqual(tags, ['technology'])
 
     def test_news_not_found(self):
