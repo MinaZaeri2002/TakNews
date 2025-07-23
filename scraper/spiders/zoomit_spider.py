@@ -58,6 +58,7 @@ class ZoomitSpider(scrapy.Spider):
             )
 
     def parse_archive(self, response):
+        article_links = []
         page_number = response.meta["page_number"]
         self.logger.info(f"Archive page {page_number}: {response.url}")
 
@@ -72,10 +73,10 @@ class ZoomitSpider(scrapy.Spider):
                 return
 
             elif self.article_pattern.match(href):
-                yield scrapy.Request(
-                    href,
-                    callback=self.parse_news
-                )
+                article_links.append(href)
+
+                for link in reversed(article_links):
+                    yield scrapy.Request(link, callback=self.parse_news)
 
         if not self.found_last_db_url and self.current_page < self.max_pages:
             self.current_page += 1
